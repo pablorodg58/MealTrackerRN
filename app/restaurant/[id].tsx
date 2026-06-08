@@ -6,21 +6,27 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, fontSize, spacing } from '../../src/theme';
 import { getRestaurantById } from '../../src/utils/seedData';
-import { getCurrentUserId, getMealsByRestaurant } from '../../src/utils/storage';
-import { Meal } from '../../src/types';
+import { getCurrentUserId, getMealsByRestaurant, getUsers } from '../../src/utils/storage';
+import { Meal, User } from '../../src/types';
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
   const restaurant = getRestaurantById(id ?? '');
   const [lastMeals, setLastMeals] = useState<Meal[]>([]);
+  const [usersMap, setUsersMap]   = useState<Record<string, string>>({});
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const userId = await getCurrentUserId();
-        if (!userId || !id) return;
-        const meals = await getMealsByRestaurant(id, userId);
+        if (!id) return;
+        const [meals, users] = await Promise.all([
+          getMealsByRestaurant(id),
+          getUsers(),
+        ]);
+        const map: Record<string, string> = {};
+        users.forEach((u: User) => { map[u.id] = u.username; });
+        setUsersMap(map);
         setLastMeals(meals);
       })();
     }, [id])
@@ -39,16 +45,14 @@ export default function RestaurantDetailScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
-      {/* Hero image */}
       <Image
         source={{ uri: restaurant.imageUrl }}
         style={s.heroImage}
         accessibilityLabel={`${restaurant.name} restaurant photo`}
       />
 
-      {/* Back button overlay */}
       <TouchableOpacity style={s.backOverlay} onPress={() => router.back()}
-        accessibilityLabel="Go back to restaurants list">
+>
         <Ionicons name="arrow-back" size={24} color={theme.text} />
       </TouchableOpacity>
 
@@ -57,13 +61,11 @@ export default function RestaurantDetailScreen() {
         <Text style={s.location}>📍 {restaurant.location}</Text>
         <Text style={s.description}>{restaurant.description}</Text>
 
-        {/* Menu */}
         <Text style={s.sectionTitle}>Menu</Text>
         {restaurant.dishes.map((dish, i) => (
           <Text key={i} style={s.menuItem}>• {dish}</Text>
         ))}
 
-        {/* Last meals */}
         <Text style={s.sectionTitle}>Last meals</Text>
         {lastMeals.length === 0 ? (
           <Text style={s.noMeals}>No previous meals recorded here.</Text>
@@ -71,15 +73,14 @@ export default function RestaurantDetailScreen() {
           lastMeals.map((m) => (
             <Text key={m.id} style={s.lastMealRow}>
               {m.date}  ⭐ {m.averageScore.toFixed(1)}
+              {'  '}<Text style={s.lastMealUser}>@{usersMap[m.userId] ?? 'unknown'}</Text>
             </Text>
           ))
         )}
 
-        {/* Actions */}
         <TouchableOpacity
           style={s.addBtn}
           onPress={() => router.push(`/add-meal/${restaurant.id}`)}
-          accessibilityLabel="Add a new meal at this restaurant"
         >
           <Text style={s.addBtnText}>Add Food</Text>
         </TouchableOpacity>
@@ -100,6 +101,7 @@ const s = StyleSheet.create({
   menuItem:     { fontSize: fontSize.body, color: theme.text, lineHeight: 28 },
   noMeals:      { fontSize: fontSize.body, color: theme.textMuted, fontStyle: 'italic' },
   lastMealRow:  { fontSize: fontSize.body, color: theme.textSecondary, lineHeight: 28 },
+  lastMealUser: { fontSize: fontSize.body, color: theme.primary, fontWeight: '600' },
   addBtn:       { backgroundColor: theme.primary, borderRadius: 8, padding: spacing.md, alignItems: 'center', marginTop: spacing.lg },
   addBtnText:   { fontSize: fontSize.body, fontWeight: 'bold', color: theme.black },
   backBtn:      { margin: spacing.md },

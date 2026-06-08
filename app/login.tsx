@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { theme, fontSize, spacing } from '../src/theme';
 import { validateLoginForm } from '../src/utils/validation';
 import { findUserByUsername, setCurrentUserId } from '../src/utils/storage';
-import { hashPassword } from '../src/utils/passwordUtils';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,9 +21,8 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const hash = await hashPassword(password);
-      const user = await findUserByUsername(username.trim());
-      if (!user || user.passwordHash !== hash) {
+        const user = await findUserByUsername(username.trim());
+      if (!user || user.password !== password) {
         Alert.alert('Error', 'Invalid username or password');
         return;
       }
@@ -50,7 +48,6 @@ export default function LoginScreen() {
         onChangeText={setUsername}
         autoCapitalize="none"
         autoCorrect={false}
-        accessibilityLabel="Username input field"
       />
 
       <Text style={s.label}>Password</Text>
@@ -62,23 +59,22 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPass}
-          accessibilityLabel="Password input field"
-        />
+          />
         <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPass(v => !v)}
-          accessibilityLabel={showPass ? 'Hide password' : 'Show password'}>
+>
           <Text style={s.eyeText}>{showPass ? '🙈' : '👁'}</Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading}
-        accessibilityLabel="Login In button">
+>
         {loading
           ? <ActivityIndicator color={theme.black} />
           : <Text style={s.btnText}>Login In</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/signin')}
-        accessibilityLabel="Go to registration screen">
+>
         <Text style={s.link}>Don't have an account? Sign in</Text>
       </TouchableOpacity>
     </ScrollView>

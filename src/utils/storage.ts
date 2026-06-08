@@ -1,7 +1,3 @@
-/**
- * All AsyncStorage (localStorage) operations.
- * Data is stored as JSON strings under namespaced keys.
- */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Meal, MealItem } from '../types';
 
@@ -11,8 +7,6 @@ const K = {
   MEALS:        '@mt/meals',
 };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
 async function getJSON<T>(key: string): Promise<T[]> {
   const json = await AsyncStorage.getItem(key);
   return json ? (JSON.parse(json) as T[]) : [];
@@ -20,8 +14,6 @@ async function getJSON<T>(key: string): Promise<T[]> {
 async function setJSON<T>(key: string, data: T[]): Promise<void> {
   await AsyncStorage.setItem(key, JSON.stringify(data));
 }
-
-// ─── Users ─────────────────────────────────────────────────────────────────
 
 export const getUsers = () => getJSON<User>(K.USERS);
 export const saveUsers = (users: User[]) => setJSON<User>(K.USERS, users);
@@ -42,8 +34,6 @@ export async function addUser(user: User): Promise<void> {
   await saveUsers(users);
 }
 
-// ─── Session ───────────────────────────────────────────────────────────────
-
 export const getCurrentUserId = (): Promise<string | null> =>
   AsyncStorage.getItem(K.CURRENT_USER);
 
@@ -52,8 +42,6 @@ export const setCurrentUserId = (id: string): Promise<void> =>
 
 export const clearSession = (): Promise<void> =>
   AsyncStorage.removeItem(K.CURRENT_USER);
-
-// ─── Meals ─────────────────────────────────────────────────────────────────
 
 export const getMeals = () => getJSON<Meal>(K.MEALS);
 export const saveMeals = (meals: Meal[]) => setJSON<Meal>(K.MEALS, meals);
@@ -64,6 +52,11 @@ export async function addMeal(meal: Meal): Promise<void> {
   await saveMeals(meals);
 }
 
+export async function getAllMeals(): Promise<Meal[]> {
+  const meals = await getMeals();
+  return meals.sort((a, b) => b.date.localeCompare(a.date));
+}
+
 export async function getMealsByUser(userId: string): Promise<Meal[]> {
   const meals = await getMeals();
   return meals
@@ -71,13 +64,10 @@ export async function getMealsByUser(userId: string): Promise<Meal[]> {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function getMealsByRestaurant(
-  restaurantId: string,
-  userId: string
-): Promise<Meal[]> {
+export async function getMealsByRestaurant(restaurantId: string): Promise<Meal[]> {
   const meals = await getMeals();
   return meals
-    .filter((m) => m.restaurantId === restaurantId && m.userId === userId)
+    .filter((m) => m.restaurantId === restaurantId)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
 }
@@ -86,8 +76,6 @@ export async function getMealById(id: string): Promise<Meal | null> {
   const meals = await getMeals();
   return meals.find((m) => m.id === id) ?? null;
 }
-
-// ─── Meal score helper ────────────────────────────────────────────────────
 
 export function calculateAverageScore(items: MealItem[]): number {
   if (items.length === 0) return 0;

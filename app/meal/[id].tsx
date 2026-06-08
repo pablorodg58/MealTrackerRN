@@ -33,9 +33,8 @@ export default function MealDetailScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
-      {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back to meals list">
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={s.title}>List of Meals</Text>
@@ -46,7 +45,6 @@ export default function MealDetailScreen() {
         <Text style={s.date}>{meal.date}</Text>
         <Text style={s.score}>Average Score: ⭐ {meal.averageScore.toFixed(1)}</Text>
 
-        {/* Table header */}
         <View style={s.tableHeader}>
           <Text style={[s.colHead, { flex: 1 }]}>Dish</Text>
           <Text style={s.colHead}>Flavor</Text>
@@ -54,7 +52,6 @@ export default function MealDetailScreen() {
         </View>
         <View style={s.divider} />
 
-        {/* Items */}
         {meal.items.map((item, i) => (
           <View key={i} style={s.tableRow}>
             <Text style={[s.cellDish, { flex: 1 }]}>{item.dishName}</Text>
@@ -63,19 +60,16 @@ export default function MealDetailScreen() {
           </View>
         ))}
 
-        {/* Action buttons */}
         <View style={s.btnRow}>
           <TouchableOpacity
             style={s.visitBtn}
             onPress={() => router.push(`/restaurant/${meal.restaurantId}`)}
-            accessibilityLabel="Visit this restaurant page"
           >
             <Text style={s.visitBtnText}>Visit Restaurant</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={s.backListBtn}
             onPress={() => router.back()}
-            accessibilityLabel="Return to meals list"
           >
             <Text style={s.backListBtnText}>Back List</Text>
           </TouchableOpacity>

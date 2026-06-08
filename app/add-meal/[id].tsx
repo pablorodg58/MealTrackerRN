@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Alert, Platform,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,12 +10,20 @@ import { getRestaurantById } from '../../src/utils/seedData';
 import { getCurrentUserId, addMeal, calculateAverageScore } from '../../src/utils/storage';
 import { validateScore } from '../../src/utils/validation';
 import { MealItem } from '../../src/types';
+import AppModal from '../../src/components/AppModal';
 
 interface DishState {
   name: string;
   checked: boolean;
   flavor: string;
   price: string;
+}
+
+interface ModalState {
+  visible: boolean;
+  title: string;
+  message: string;
+  mode: 'info' | 'confirm' | 'success';
 }
 
 export default function AddMealScreen() {
@@ -29,68 +36,69 @@ export default function AddMealScreen() {
   );
   const [date, setDate]             = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [modal, setModal]           = useState<ModalState>({
+    visible: false, title: '', message: '', mode: 'info',
+  });
 
-  const dateString = date.toISOString().slice(0, 10); // YYYY-MM-DD
+  const dateString = date.toISOString().slice(0, 10);
 
-  const toggleDish = (i: number) => {
+  const toggleDish = (i: number) =>
     setDishes((prev) => prev.map((d, idx) => idx === i ? { ...d, checked: !d.checked } : d));
-  };
-  const setFlavor = (i: number, v: string) => {
+  const setFlavor = (i: number, v: string) =>
     setDishes((prev) => prev.map((d, idx) => idx === i ? { ...d, flavor: v } : d));
-  };
-  const setPrice = (i: number, v: string) => {
+  const setPrice  = (i: number, v: string) =>
     setDishes((prev) => prev.map((d, idx) => idx === i ? { ...d, price: v } : d));
-  };
+
+  const showInfo = (title: string, message: string) =>
+    setModal({ visible: true, title, message, mode: 'info' });
 
   const handleSave = () => {
     const selected = dishes.filter((d) => d.checked);
     if (selected.length === 0) {
-      Alert.alert('Error', 'Please select at least one dish.'); return;
+      showInfo('No dishes selected', 'Please select at least one dish before saving.');
+      return;
     }
     const invalid = selected.find(
       (d) => !validateScore(d.flavor).valid || !validateScore(d.price).valid
     );
     if (invalid) {
-      Alert.alert('Error', 'All selected dishes need valid Flavor and Price scores (0.0 – 5.0).'); return;
+      showInfo(
+        'Invalid scores',
+        `"${invalid.name}" needs valid Flavor and Price scores between 0.0 and 5.0.`
+      );
+      return;
     }
 
-    const summary = selected.map((d) => `• ${d.name}   Flavor: ${d.flavor}   Price: ${d.price}`).join('\n');
-    Alert.alert(
-      'Do you want to save your meal?',
-      summary,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save Entry',
-          onPress: async () => {
-            const userId = await getCurrentUserId();
-            if (!userId) { router.replace('/login'); return; }
-            const items: MealItem[] = selected.map((d) => ({
-              dishName: d.name,
-              flavorScore: parseFloat(d.flavor),
-              priceScore: parseFloat(d.price),
-            }));
-            const meal = {
-              id: Date.now().toString(),
-              restaurantId: id ?? '',
-              userId,
-              date: dateString,
-              items,
-              averageScore: calculateAverageScore(items),
-            };
-            await addMeal(meal);
-            Alert.alert('Success', 'Meal saved!', [
-              { text: 'OK', onPress: () => router.back() },
-            ]);
-          },
-        },
-      ]
-    );
+    const summary = selected
+      .map((d) => `• ${d.name}   Flavor: ${d.flavor}   Price: ${d.price}`)
+      .join('\n');
+    setModal({ visible: true, title: 'Save this meal?', message: summary, mode: 'confirm' });
+  };
+
+  const confirmSave = async () => {
+    setModal((m) => ({ ...m, visible: false }));
+    const userId = await getCurrentUserId();
+    if (!userId) { router.replace('/login'); return; }
+    const selected = dishes.filter((d) => d.checked);
+    const items: MealItem[] = selected.map((d) => ({
+      dishName:    d.name,
+      flavorScore: parseFloat(d.flavor),
+      priceScore:  parseFloat(d.price),
+    }));
+    const meal = {
+      id:           Date.now().toString(),
+      restaurantId: id ?? '',
+      userId,
+      date:         dateString,
+      items,
+      averageScore: calculateAverageScore(items),
+    };
+    await addMeal(meal);
+    setModal({ visible: true, title: 'Meal saved!', message: 'Your meal has been recorded successfully.', mode: 'success' });
   };
 
   return (
     <View style={s.screen}>
-      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -99,7 +107,6 @@ export default function AddMealScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
-        {/* Date picker */}
         <Text style={s.sectionLabel}>Day</Text>
         <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker(true)}
           accessibilityLabel="Open date picker">
@@ -116,18 +123,16 @@ export default function AddMealScreen() {
           />
         )}
 
-        {/* Column headers */}
         <View style={s.columnHeader}>
           <Text style={[s.colLabel, { flex: 1 }]}>Dish</Text>
           <Text style={s.colLabel}>Flavor</Text>
           <Text style={s.colLabel}>Price</Text>
         </View>
 
-        {/* Dishes */}
         {dishes.map((dish, i) => (
           <View key={i} style={s.dishRow}>
             <TouchableOpacity style={s.checkRow} onPress={() => toggleDish(i)}
-              accessibilityLabel={`${dish.checked ? 'Deselect' : 'Select'} ${dish.name}`}>
+>
               <View style={[s.checkbox, dish.checked && s.checkboxChecked]}>
                 {dish.checked && <Ionicons name="checkmark" size={14} color={theme.black} />}
               </View>
@@ -143,7 +148,6 @@ export default function AddMealScreen() {
                   keyboardType="decimal-pad"
                   placeholder="0–5"
                   placeholderTextColor={theme.textMuted}
-                  accessibilityLabel={`Flavor score for ${dish.name}`}
                 />
                 <TextInput
                   style={s.scoreInput}
@@ -152,14 +156,12 @@ export default function AddMealScreen() {
                   keyboardType="decimal-pad"
                   placeholder="0–5"
                   placeholderTextColor={theme.textMuted}
-                  accessibilityLabel={`Price score for ${dish.name}`}
                 />
               </View>
             )}
           </View>
         ))}
 
-        {/* Buttons */}
         <View style={s.btnRow}>
           <TouchableOpacity style={s.saveBtn} onPress={handleSave}
             accessibilityLabel="Save meal entry">
@@ -171,6 +173,52 @@ export default function AddMealScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {modal.mode === 'info' && (
+        <AppModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          buttons={[{
+            text: 'OK',
+            variant: 'primary',
+            onPress: () => setModal((m) => ({ ...m, visible: false })),
+          }]}
+        />
+      )}
+
+      {modal.mode === 'confirm' && (
+        <AppModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          buttons={[
+            {
+              text: 'Cancel',
+              variant: 'cancel',
+              onPress: () => setModal((m) => ({ ...m, visible: false })),
+            },
+            {
+              text: 'Save Entry',
+              variant: 'primary',
+              onPress: confirmSave,
+            },
+          ]}
+        />
+      )}
+
+      {modal.mode === 'success' && (
+        <AppModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          buttons={[{
+            text: 'OK',
+            variant: 'primary',
+            onPress: () => { setModal((m) => ({ ...m, visible: false })); router.back(); },
+          }]}
+        />
+      )}
     </View>
   );
 }

@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { theme, fontSize, spacing } from '../src/theme';
 import { validateRegisterForm } from '../src/utils/validation';
 import { findUserByUsername, findUserByEmail, addUser, setCurrentUserId } from '../src/utils/storage';
-import { hashPassword } from '../src/utils/passwordUtils';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -30,12 +29,11 @@ export default function SignInScreen() {
       if (existingUser) { Alert.alert('Error', 'Username is already taken'); return; }
       if (existingEmail) { Alert.alert('Error', 'Email is already registered'); return; }
 
-      const hash = await hashPassword(password);
       const newUser = {
         id: Date.now().toString(),
         email: email.trim().toLowerCase(),
         username: username.trim(),
-        passwordHash: hash,
+        password: password,
       };
       await addUser(newUser);
       await setCurrentUserId(newUser.id);
@@ -60,7 +58,6 @@ export default function SignInScreen() {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-        accessibilityLabel="Email address input"
       />
 
       <Text style={s.label}>Username</Text>
@@ -71,7 +68,6 @@ export default function SignInScreen() {
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
-        accessibilityLabel="Username input"
       />
 
       <Text style={s.label}>Password</Text>
@@ -83,23 +79,22 @@ export default function SignInScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPass}
-          accessibilityLabel="Password input (minimum 6 characters)"
-        />
+          />
         <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPass(v => !v)}
-          accessibilityLabel={showPass ? 'Hide password' : 'Show password'}>
+>
           <Text style={s.eyeText}>{showPass ? '🙈' : '👁'}</Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={s.btn} onPress={handleRegister} disabled={loading}
-        accessibilityLabel="Create account button">
+>
         {loading
           ? <ActivityIndicator color={theme.black} />
           : <Text style={s.btnText}>Sign In</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/login')}
-        accessibilityLabel="Go to login screen">
+>
         <Text style={s.link}>Already have an account? Log in</Text>
       </TouchableOpacity>
     </ScrollView>

@@ -1,7 +1,3 @@
-/**
- * Pure validation utilities — fully unit-testable without React Native.
- */
-
 export interface ValidationResult {
   valid: boolean;
   error?: string;

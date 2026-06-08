@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#1A1A1A"
     },
-    "ios": { "supportsTablet": false },
+    "ios": {
+      "supportsTablet": false
+    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -19,9 +21,17 @@
       },
       "package": "com.pablorodriguez.mealtracker"
     },
-    "web": { "bundler": "metro", "output": "static" },
-    "plugins": ["expo-router"],
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker"
+    ],
     "scheme": "mealtracker",
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

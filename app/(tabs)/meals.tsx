@@ -1,17 +1,20 @@
 import { useState, useCallback } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, fontSize, spacing } from '../../src/theme';
 import { getCurrentUserId, getMealsByUser, clearSession } from '../../src/utils/storage';
 import { getRestaurantById } from '../../src/utils/seedData';
 import { Meal } from '../../src/types';
+import AppModal from '../../src/components/AppModal';
 
 export default function MealListScreen() {
   const router = useRouter();
   const [meals, setMeals] = useState<Meal[]>([]);
+
+  const [modal, setModal] = useState<{
+    visible: boolean; title: string; message: string;
+  }>({ visible: false, title: '', message: '' });
 
   useFocusEffect(
     useCallback(() => {
@@ -25,22 +28,15 @@ export default function MealListScreen() {
   );
 
   const handleLogout = () => {
-    Alert.alert(
-      'Do you want to logout?',
-      "Are you sure you want to log out? Click 'Confirm' to end your session or 'Cancel' to stay logged in.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm', style: 'destructive',
-          onPress: async () => { await clearSession(); router.replace('/login'); },
-        },
-      ]
-    );
+    setModal({
+      visible: true,
+      title: 'Do you want to logout?',
+      message: "Are you sure you want to log out? Tap 'Confirm' to end your session or 'Cancel' to stay logged in.",
+    });
   };
 
   return (
     <View style={s.screen}>
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>List of Meals</Text>
         <TouchableOpacity onPress={handleLogout} accessibilityLabel="Logout from account" style={s.logoutBtn}>
@@ -59,14 +55,12 @@ export default function MealListScreen() {
           data={meals}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 16 }}
-          accessibilityLabel="Your recorded meals"
           renderItem={({ item }) => {
             const restaurant = getRestaurantById(item.restaurantId);
             return (
               <TouchableOpacity
                 style={s.card}
                 onPress={() => router.push(`/meal/${item.id}`)}
-                accessibilityLabel={`Open meal at ${restaurant?.name ?? 'restaurant'} on ${item.date}`}
               >
                 <Text style={s.cardName}>{restaurant?.name ?? 'Unknown Restaurant'}</Text>
                 <Text style={s.cardDate}>{item.date}</Text>
@@ -77,20 +71,42 @@ export default function MealListScreen() {
           }}
         />
       )}
+
+      <AppModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        buttons={[
+          {
+            text: 'Cancel',
+            variant: 'cancel',
+            onPress: () => setModal((m) => ({ ...m, visible: false })),
+          },
+          {
+            text: 'Confirm',
+            variant: 'primary',
+            onPress: async () => {
+              setModal((m) => ({ ...m, visible: false }));
+              await clearSession();
+              router.replace('/login');
+            },
+          },
+        ]}
+      />
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  screen:          { flex: 1, backgroundColor: theme.background },
-  header:          { flexDirection: 'row', alignItems: 'center', padding: spacing.md, paddingTop: 52 },
-  title:           { flex: 1, fontSize: fontSize.title, color: theme.primary, fontWeight: 'bold' },
-  logoutBtn:       { padding: spacing.xs },
-  emptyContainer:  { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  emptyText:       { fontSize: fontSize.body, color: theme.textSecondary, textAlign: 'center', lineHeight: 24 },
-  card:            { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-  cardName:        { fontSize: fontSize.heading, color: theme.primary, fontWeight: 'bold' },
-  cardDate:        { fontSize: fontSize.body, color: theme.textSecondary, marginTop: 4 },
-  cardScore:       { fontSize: fontSize.body, color: theme.primary, fontWeight: '600', marginTop: 4 },
-  divider:         { height: 1, backgroundColor: theme.divider, marginTop: spacing.md },
+  screen:         { flex: 1, backgroundColor: theme.background },
+  header:         { flexDirection: 'row', alignItems: 'center', padding: spacing.md, paddingTop: 52 },
+  title:          { flex: 1, fontSize: fontSize.title, color: theme.primary, fontWeight: 'bold' },
+  logoutBtn:      { padding: spacing.xs },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  emptyText:      { fontSize: fontSize.body, color: theme.textSecondary, textAlign: 'center', lineHeight: 24 },
+  card:           { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  cardName:       { fontSize: fontSize.heading, color: theme.primary, fontWeight: 'bold' },
+  cardDate:       { fontSize: fontSize.body, color: theme.textSecondary, marginTop: 4 },
+  cardScore:      { fontSize: fontSize.body, color: theme.primary, fontWeight: '600', marginTop: 4 },
+  divider:        { height: 1, backgroundColor: theme.divider, marginTop: spacing.md },
 });
